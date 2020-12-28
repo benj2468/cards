@@ -70,15 +70,8 @@ impl AcesUpGame {
         let mut last_move_dest: isize = -1;
         loop
         {
-            let mut last_open: isize = -1;
-            let mut last_ace: isize = -1;
-            
-            self.columns.iter().map(|c| c.last()).enumerate().for_each(|(i,c)| {
-                match c {
-                    Some(s) => if s.is_ace() { last_ace = i as isize; }
-                    None => last_open = i as isize
-                }
-            });
+            let (last_open, last_ace) = self.can_move_positions();
+
             if last_move_dest == last_ace
             {
                 break
@@ -99,13 +92,19 @@ impl AcesUpGame {
     // set toggle to true if getting a "from", set to false if getting a "to"
     fn get_move_input(&self, toggle: bool) -> usize
     {
-        println!("Input a column to move from: (1-4,L-R) ");
+        let from_to_str = if toggle { "from" } else { "to" };
+        println!("Input a column to move {}: (1-4,L-R) ", from_to_str);
         let command: usize = read!("{}\n");
-        if command >= 1 
-        && command <= 4 
-        && (( toggle && self.columns[command].len() > 0) || (!toggle && self.columns[command].len() == 0))
+        let comm_index = command - 1;
+        if comm_index >= 0 
+        && comm_index <= 3
+        && (( 
+                toggle && self.columns[comm_index].len() >= 1 
+            ) || (
+                !toggle && self.columns[comm_index].len() == 0)
+            )
         {
-            return command
+            return comm_index
         }
         
         println!("Invalid input, try again");
@@ -117,12 +116,36 @@ impl AcesUpGame {
         let card = self.columns[from].pop().unwrap();
         self.columns[to].push(card);
     }
+
+    fn can_move_positions(&self) -> (isize, isize)
+    {
+        let mut last_open: isize = -1;
+        let mut last_ace: isize = -1;
+        
+        self.columns.iter().map(|c| c.last()).enumerate().for_each(|(i,c)| {
+            match c {
+                Some(s) => if s.is_ace() { last_ace = i as isize; }
+                None => last_open = i as isize
+            }
+        });
+
+        (last_open, last_ace)
+    }
+
+    fn can_move(&self) -> bool
+    {
+        let (last_open, last_ace) = self.can_move_positions();
+        println!("{}, {}", last_open, last_ace);
+        last_open > -1 && last_ace > -1
+    }
 }
 
 impl fmt::Display for AcesUpGame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let max_column = self.columns.iter().map(|c| c.len()).max().unwrap();
-        let mut lines = vec![];
+        let mut lines = vec![
+            format!("🃏 : {} Cards remaining", self.deck.size()),
+            format!("+ ------------------- +")];
         for i in 0..max_column
         {
             let strings: Vec<String> = self.columns.iter().map(|c| c.get(i)).map(|c| {
@@ -134,6 +157,7 @@ impl fmt::Display for AcesUpGame {
             lines.push(strings.join(" | "));
         };
 
+        lines.push(format!("+ ------------------- +"));
         write!(f, "{}", lines.join("\n"))
     }
 }
@@ -143,8 +167,15 @@ impl Game for AcesUpGame {
     {
         self.for_each(|_| ());
 
-        if self.win() { return true }
-        else { return false }
+        if self.win() 
+        { 
+            println!("You won 😀");
+            return true
+        }
+        else 
+        { 
+            println!("You lost 😥");
+            return false }
     }
 
     fn win(&self) -> bool
@@ -169,6 +200,11 @@ impl Game for AcesUpGame {
                 self.handle_input();
             },
             "M" => {
+                if !self.can_move()
+                {
+                    println!("Sorry, you cannot move on the current board.");
+                    self.handle_input();
+                }
                 let from = self.get_move_input(true);
                 let to = self.get_move_input(false);
                 self.handle_move(from, to);
