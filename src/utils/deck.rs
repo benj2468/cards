@@ -30,23 +30,69 @@ impl fmt::Display for Suit {
 pub struct Card {
     pub suit: Suit,
     pub rank: u8,
+    pub visible: bool,
 }
 
 impl Card {
     pub fn new(suit: Suit, rank: u8) -> Result<Card, String> {
         if rank > MAX_CARD_RANK { return Err(format!("Cannot create a card with that rank, max rank is 13, {} provided", rank))}
         
-        Ok(Card { suit, rank })
+        Ok(Card { suit, rank, visible: true })
+    }
+
+    pub fn new_visible(suit: Suit, rank: u8) -> Result<Card, String> {
+        let mut card = Card::new(suit, rank).unwrap();
+
+        card.visible = true;
+
+        Ok(card)
     }
 
     pub fn is_ace(&self) -> bool
     {
         self.rank == MAX_CARD_RANK
     }
+
+    pub fn set_visible(&mut self, new_val: bool)
+    {
+        self.visible = new_val;
+    }
+
+    pub fn see(mut self) -> Card
+    {
+        self.visible = true;
+
+        self
+    }
+
+    pub fn hide(mut self) -> Card
+    {
+        self.visible = false;
+        
+        self
+    }
+    pub fn color(&self) -> bool
+    {
+        match self.suit
+        {
+            Suit::Club => true,
+            Suit::Spade => true,
+            Suit::Diamond => false,
+            Suit::Heart => false,
+            Suit::Joker => {
+                if self.rank == 0 { return true }
+                else { return false };
+            }
+        }
+    }
 }
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !self.visible
+        {
+            return write!(f, "? ?")
+        }
         let rank_str: String = match self.rank {
             13 => String::from(" K"),
             12 => String::from(" Q"),
@@ -129,6 +175,10 @@ impl Stack {
 
         cards
     }
+
+    pub fn top_card(&self) -> Option<&Card> {
+        self.cards.get(self.top)
+    }
 }
 
 #[cfg(test)]
@@ -138,8 +188,13 @@ mod test {
 
     #[test]
     fn new_card() {
-        let card = Card::new(Suit::Heart, 3);
+        let card = Card::new_visible(Suit::Heart, 3);
         assert_eq!(format!("{}", card.unwrap()), " 3❤");
+    }
+
+    fn new_hidden_card() {
+        let card = Card::new(Suit::Heart, 3);
+        assert_eq!(format!("{}", card.unwrap()), "? ?");
     }
 
     #[test]

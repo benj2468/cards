@@ -1,5 +1,8 @@
 use cards;
+use std::io;
 
-fn main() {
-    cards::select_game();
+fn main() -> io::Result<()> {
+    cards::select_game()?;
+
+    Ok(())
 }

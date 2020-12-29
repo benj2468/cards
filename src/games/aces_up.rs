@@ -1,22 +1,26 @@
 #[path = "../utils/deck.rs"] mod deck;
 #[path = "../games/game.rs"] mod game;
 
-use deck::{Stack, Card, Suit};
+use game::Game;
+use deck::{Stack, Card};
 use std::collections::HashMap;
 use text_io::read;
-use game::Game;
 use std::fmt;
 
 
-pub struct AcesUpGame {
+pub struct AcesUpGame 
+{
     deck: Stack,
     columns: Vec<Vec<Card>>
 }
 
-impl AcesUpGame {
+impl AcesUpGame 
+{
     pub fn new() -> AcesUpGame
     {
-        let deck = Stack::new_deck_reverse(false);
+        let mut deck = Stack::new_deck_reverse(false);
+
+        deck.shuffle();
 
         AcesUpGame
         {
@@ -25,10 +29,35 @@ impl AcesUpGame {
         }
     }
 
-    pub fn start(&mut self) {
-        self.deck.shuffle();
+    pub fn play()
+    {
+        let mut game = AcesUpGame::new();
 
-        self.play();
+        while game.deck.size() > 0
+        {
+            game.turn()
+        }
+
+        if game.win() 
+        { 
+            println!("You won 😀");
+        }
+        else 
+        { 
+            println!("You lost 😥");
+        }
+    }
+
+    pub fn turn(&mut self)
+    {
+        for i in 0..4
+        {
+            let mut card = self.deck.draw();
+            card.set_visible(true);
+            self.columns[i].push(card);
+        };
+
+        self.handle_input();
     }
 
     fn clean(&mut self)
@@ -96,8 +125,7 @@ impl AcesUpGame {
         println!("Input a column to move {}: (1-4,L-R) ", from_to_str);
         let command: usize = read!("{}\n");
         let comm_index = command - 1;
-        if comm_index >= 0 
-        && comm_index <= 3
+        if comm_index <= 3
         && (( 
                 toggle && self.columns[comm_index].len() >= 1 
             ) || (
@@ -140,7 +168,8 @@ impl AcesUpGame {
     }
 }
 
-impl fmt::Display for AcesUpGame {
+impl fmt::Display for AcesUpGame 
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let max_column = self.columns.iter().map(|c| c.len()).max().unwrap();
         let mut lines = vec![
@@ -162,22 +191,8 @@ impl fmt::Display for AcesUpGame {
     }
 }
 
-impl Game for AcesUpGame {
-    fn play(&mut self) -> bool
-    {
-        self.for_each(|_| ());
-
-        if self.win() 
-        { 
-            println!("You won 😀");
-            return true
-        }
-        else 
-        { 
-            println!("You lost 😥");
-            return false }
-    }
-
+impl game::Game for AcesUpGame 
+{
     fn win(&self) -> bool
     {
         for i in 0..4 
@@ -223,30 +238,11 @@ impl Game for AcesUpGame {
     }
 }
 
-impl Iterator for AcesUpGame {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> 
-    {
-        for i in 0..4
-        {
-            self.columns[i].push(self.deck.draw())
-        };
-
-        self.handle_input();
-
-        let size = self.deck.size();
-        if size > 0 { return Some(size) }
-        else { return None }
-    }
-
-    
-}
-
 #[cfg(test)]
 mod test 
 {
     use super::*;
+    use deck::{Suit};
 
     #[test]
     fn clean()
@@ -254,19 +250,19 @@ mod test
         let mut game = AcesUpGame::new();
 
         game.columns = vec![
-            vec![Card { suit: Suit::Club, rank: 13 }],
-            vec![Card { suit: Suit::Club, rank: 12 }],
-            vec![Card { suit: Suit::Spade, rank: 5 }, Card { suit: Suit::Club, rank: 11 }],
-            vec![Card { suit: Suit::Spade, rank: 6 }, Card { suit: Suit::Spade, rank: 14 }]
+            vec![Card { suit: Suit::Club, rank: 13, visible: false }],
+            vec![Card { suit: Suit::Club, rank: 12, visible: false }],
+            vec![Card { suit: Suit::Spade, rank: 5, visible: false }, Card { suit: Suit::Club, rank: 11, visible: false }],
+            vec![Card { suit: Suit::Spade, rank: 6, visible: false }, Card { suit: Suit::Spade, rank: 14, visible: false }]
         ];
 
         game.clean();
 
         assert_eq!(game.columns, vec![
-            vec![Card { suit: Suit::Club, rank: 13 }], 
+            vec![Card { suit: Suit::Club, rank: 13, visible: false }], 
             vec![], 
             vec![], 
-            vec![Card { suit: Suit::Spade, rank: 6 }, Card { suit: Suit::Spade, rank: 14 }]
+            vec![Card { suit: Suit::Spade, rank: 6, visible: false }, Card { suit: Suit::Spade, rank: 14, visible: false }]
             ]);
     }
 
@@ -276,10 +272,10 @@ mod test
         let mut game = AcesUpGame::new();
 
         game.columns = vec![
-            vec![Card { suit: Suit::Club, rank: 13 }],
-            vec![Card { suit: Suit::Club, rank: 12 }],
-            vec![Card { suit: Suit::Spade, rank: 5 }, Card { suit: Suit::Club, rank: 11 }],
-            vec![Card { suit: Suit::Spade, rank: 6 }, Card { suit: Suit::Spade, rank: 14 }]
+            vec![Card { suit: Suit::Club, rank: 13, visible: false }],
+            vec![Card { suit: Suit::Club, rank: 12, visible: false }],
+            vec![Card { suit: Suit::Spade, rank: 5, visible: false }, Card { suit: Suit::Club, rank: 11, visible: false }],
+            vec![Card { suit: Suit::Spade, rank: 6, visible: false }, Card { suit: Suit::Spade, rank: 14, visible: false }]
         ];
 
         assert_eq!(game.win(), false)
